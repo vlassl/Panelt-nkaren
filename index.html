@@ -15,7 +15,7 @@
 
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Familjen+Grotesk:wght@400;500;600;700&family=Spline+Sans+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Familjen+Grotesk:wght@400;500;600;700&family=Orbitron:wght@700;900&family=Spline+Sans+Mono:wght@400;500;600&display=swap" rel="stylesheet">
 <style>
   :root{
     --paper:#eceae2;        /* drafting paper */
@@ -53,7 +53,12 @@
   .head{display:flex;justify-content:space-between;align-items:flex-end;gap:12px}
   .head h1{font-size:clamp(26px,8vw,44px);font-weight:700;margin:0;letter-spacing:-.015em;line-height:1}
   .card-head{display:flex;justify-content:space-between;align-items:center;gap:12px;margin-bottom:14px}
-  .apptitle{margin:0 !important;font-family:var(--disp) !important;font-weight:700 !important;font-size:clamp(20px,6vw,28px) !important;color:var(--ink) !important;letter-spacing:-.005em;text-transform:none}
+  @font-face{
+    font-family:'StarJediLocal';
+    src:local('Star Jedi'), local('StarJedi'), local('Starjedi'), local('Star Jedi Rounded');
+    font-display:swap;
+  }
+  .apptitle{margin:0 !important;font-family:'StarJediLocal','Orbitron',var(--disp) !important;font-weight:700 !important;font-size:clamp(19px,5.6vw,28px) !important;color:var(--ink) !important;letter-spacing:.04em;text-transform:none;line-height:1.15}
   .mascot{flex:0 0 auto;width:clamp(58px,16vw,84px)}
   .mascot svg{display:block;width:100%;height:auto}
   .eyebrow{font-family:var(--mono);font-size:11px;letter-spacing:.22em;text-transform:uppercase;color:var(--steel);display:flex;justify-content:space-between;align-items:baseline}
@@ -82,6 +87,7 @@
     font-size:15px;cursor:pointer;padding:2px 4px;border-radius:3px}
   .reset-btn:hover{color:var(--dim);background:rgba(0,0,0,.05)}
 
+  .hint{margin-top:6px;font-size:11px;color:var(--ink-soft);line-height:1.4}
   .exact{margin-top:8px;font-size:11px;color:var(--ink-soft)}
   .exact .hd{font-family:var(--mono);letter-spacing:.1em;text-transform:uppercase;color:var(--steel);font-size:10px;display:block;margin-bottom:5px}
   .chips{display:flex;flex-wrap:wrap;gap:6px}
@@ -91,7 +97,7 @@
   .chip.cur{border-color:var(--dim);box-shadow:inset 0 0 0 1px var(--dim)}
   .chip b{color:var(--dim);font-weight:600}
   .chip span{font-size:10px;color:var(--ink-soft)}
-  .sub{grid-column:1/-1;font-size:11px;font-family:var(--mono);letter-spacing:.14em;text-transform:uppercase;
+  .sub{grid-column:1/-1;margin-bottom:-5px;font-size:11px;font-family:var(--mono);letter-spacing:.14em;text-transform:uppercase;
     color:var(--ink-soft);border-top:1px dashed var(--line);padding-top:10px;margin-top:2px}
   @media(min-width:620px){.sub{border:none;padding-top:0;margin-top:0}}
 
@@ -125,6 +131,9 @@
   .near .row .lab{color:var(--ink-soft);font-family:var(--disp)}
   .near .row b{color:var(--ink)}
 
+  .detail{margin-top:16px;border-top:1px dashed var(--line);padding-top:12px}
+  .detail .dhd{font-family:var(--mono);font-size:10px;letter-spacing:.14em;text-transform:uppercase;color:var(--steel);margin-bottom:6px}
+  .detail svg{display:block;width:100%;max-width:340px;height:auto}
   .facts{display:flex;flex-wrap:wrap;gap:6px 22px;font-family:var(--mono);font-size:12px;color:var(--ink-soft);margin-top:12px}
   .facts b{color:var(--ink);font-weight:600}
   .warn{color:var(--bad);font-family:var(--mono);font-size:12.5px;margin-top:10px}
@@ -231,8 +240,7 @@
       <div class="field">
         <label>Önskvärd <span class="u">mm</span></label>
         <div class="inp">
-          <input type="text" id="gdes" value="15" inputmode="decimal">
-          <button class="reset-btn" id="gdesReset" title="Återställ till medelvärdet">↺</button>
+          <input type="text" id="gdes" value="10" inputmode="decimal">
         </div>
       </div>
 
@@ -241,6 +249,11 @@
         <label>Totallängd, ytterkant–ytterkant <span class="u">mm</span></label>
         <div class="inp"><input type="text" id="L" value="3600" inputmode="decimal"></div>
         <div class="exact" id="exact"></div>
+      </div>
+      <div class="field wide">
+        <label>Nollpunkt / förskjutning <span class="u">mm</span></label>
+        <div class="inp"><input type="text" id="off" value="0" inputmode="decimal"></div>
+        <div class="hint" id="offHint"></div>
       </div>
     </div>
   </section>
@@ -252,6 +265,7 @@
     <div id="nearWrap"></div>
     <div class="facts" id="facts"></div>
     <div class="warn hidden" id="warn"></div>
+    <div class="detail" id="detail"></div>
   </section>
 
   <section class="card draw-card" id="drawCard">
@@ -285,7 +299,8 @@
   "use strict";
   const $ = id => document.getElementById(id);
   const EPS = 1e-6;
-  const state = { selected: 0, desiredManual: false, opts: [] };
+  const DEF_GDES = 10;
+  const state = { selected: 0, desiredManual: true, opts: [] };
 
   // Säker uttrycksutvärdering (tillåter enkel aritmetik i fälten)
   function parseNum(str, fallback){
@@ -307,10 +322,11 @@
     const wl=parseNum($('wl').value,45),  tl=parseNum($('tl').value,22);
     const gmin=parseNum($('gmin').value,5), gmax=parseNum($('gmax').value,25);
     let gdes;
-    if(state.desiredManual){ gdes=parseNum($('gdes').value,(gmin+gmax)/2); }
+    if(state.desiredManual){ gdes=parseNum($('gdes').value,DEF_GDES); }
     else { gdes=(gmin+gmax)/2; $('gdes').value=fmt(gdes); }
     const L=parseNum($('L').value,3600);
-    return {wb,tb,wl,tl,gmin,gmax,gdes,L};
+    const off=parseNum($('off').value,0);
+    return {wb,tb,wl,tl,gmin,gmax,gdes,L,off};
   }
 
   // g(N) = (L - N*wb) / (N-1)
@@ -346,6 +362,7 @@
   function drawSVG(p, opt){
     if(!opt){ $('svgHolder').innerHTML=''; return; }
     const {wb,wl,L} = p;
+    const off = p.off||0;
     const {N,g,cc} = opt;
 
     // Fasadvy (skalenlig i x-led). Lock ca 500 mm, bottenbrädor en brädbredd längre ner så glipan syns.
@@ -428,12 +445,12 @@
 
     // Pilmått från startkant till högerkant på varje bottenbräda (avrundat till mm)
     s.push(`<line x1="${X(0)}" y1="${ordTop-fs*0.3}" x2="${X(0)}" y2="${ordBase}" stroke="var(--dim)" stroke-width="${lw}"/>`);
-    s.push(`<text x="${X(0)}" y="${(ordTop-fs*0.6).toFixed(1)}" font-size="${fsS}" fill="var(--dim)" text-anchor="middle">0</text>`);
+    s.push(`<text x="${X(0)}" y="${(ordTop-fs*0.6).toFixed(1)}" font-size="${fsS}" fill="var(--dim)" text-anchor="middle">${fmt0(off)}</text>`);
     boards.forEach((b,i)=>{
       const yy = ordTop + rowStep*(i+1);
       s.push(`<line x1="${X(0)}" y1="${yy}" x2="${X(b.right)}" y2="${yy}" stroke="var(--dim)" stroke-width="${lw}" marker-end="url(#ah)"/>`);
       s.push(`<line x1="${X(b.right)}" y1="${yBot}" x2="${X(b.right)}" y2="${yy}" stroke="var(--dim)" stroke-width="${lw*0.6}" opacity="0.3"/>`);
-      s.push(`<text x="${(X(b.right)+aw*1.4).toFixed(1)}" y="${(yy - fs*0.18).toFixed(1)}" font-size="${fsS}" fill="var(--dim)">${fmt0(b.right)}</text>`);
+      s.push(`<text x="${(X(b.right)+aw*1.4).toFixed(1)}" y="${(yy - fs*0.18).toFixed(1)}" font-size="${fsS}" fill="var(--dim)">${fmt0(b.right+off)}</text>`);
       s.push(`<text x="${(X(0)+fs*0.3).toFixed(1)}" y="${(yy-fs*0.18).toFixed(1)}" font-size="${fsS*0.85}" fill="var(--ink-soft)">#${b.k}</text>`);
     });
 
@@ -456,6 +473,13 @@
 
   /* ---------- Totallängder för exakt önskad glipa ---------- */
   function renderExact(p){
+    const off=p.off||0;
+    const hint=$('offHint');
+    if(hint){
+      hint.textContent = off===0
+        ? 'Mät från panelens vänsterkant (0). Ange värde för att mäta från t.ex. husets hörn.'
+        : `Panelen börjar på ${fmt0(off)} och slutar på ${fmt0(off+p.L)} mm.`;
+    }
     const {wb,gdes,L} = p;
     const cc = wb+gdes;
     const Nc = Math.round((L+gdes)/cc);
@@ -565,6 +589,7 @@
       $('drawCard').classList.add('hidden');
       $('tableCard').classList.add('hidden');
       $('svgHolder').innerHTML='';
+      $('detail').innerHTML='';
     }
   }
 
@@ -573,6 +598,117 @@
     const sign = dl>0?'+':'';
     return `<div class="row"><span class="lab">${lab}${ideal?' ':''}</span>
       <span><b>${fmt(L)} mm</b> <span style="color:var(--ink-soft)">(${sign}${fmt(dl)})</span> · ${N} brädor · glipa ${fmt(g)} mm</span></div>`;
+  }
+
+  /* ---------- Detalj: genomskärning med vald glipa ---------- */
+  function drawDetail(p, opt){
+    const el = $('detail');
+    if(!opt){ el.innerHTML=''; return; }
+    const {wb,tb,wl,tl} = p;
+    const {g} = opt;
+    const ov = (p.wl - g)/2;             // lockets överlapp per sida
+    const bad = ov <= 0;
+
+    // 4 bottenbrädor (yttersta kapade på mitten) + 3 lock
+    const half = wb/2;
+    const W0 = 3*wb + 3*g;               // ritad bredd: halv + 2 hela + halv + 3 glipor
+    const mX = Math.max(W0*0.05, 18), mTop = 34, mBot = 48;
+    const W = W0 + mX*2;
+    const H = mTop + tl + tb + mBot;
+
+    const yLock = mTop, yBoard = mTop + tl, yBot = yBoard + tb;
+    const fs = Math.max(W0/40, 7);
+    const lw = Math.max(W0/650, 0.45);
+
+    // Brädornas x-lägen (b1 och b4 halva)
+    const b = [];
+    let x = mX;
+    b.push({x:x, w:half, cut:'left'});   x += half + g;
+    b.push({x:x, w:wb,   cut:null});     x += wb + g;
+    b.push({x:x, w:wb,   cut:null});     x += wb + g;
+    b.push({x:x, w:half, cut:'right'});
+
+    // Gliporna
+    const gaps = [];
+    for(let i=0;i<3;i++){
+      const gl = b[i].x + b[i].w, gr = b[i+1].x;
+      gaps.push({gl, gr, c:(gl+gr)/2});
+    }
+
+    const s=[];
+    s.push(`<svg viewBox="0 0 ${W.toFixed(1)} ${H.toFixed(1)}" xmlns="http://www.w3.org/2000/svg" font-family="Spline Sans Mono, monospace">`);
+    s.push(`<defs>
+      <marker id="dh" markerWidth="7" markerHeight="7" refX="6" refY="3.5" orient="auto">
+        <path d="M0,1 L6,3.5 L0,6" fill="none" stroke="var(--dim)" stroke-width="1.2"/></marker>
+      <marker id="dh2" markerWidth="7" markerHeight="7" refX="1" refY="3.5" orient="auto">
+        <path d="M6,1 L0,3.5 L6,6" fill="none" stroke="var(--dim)" stroke-width="1.2"/></marker>
+      <pattern id="hatch" width="4" height="4" patternUnits="userSpaceOnUse" patternTransform="rotate(45)">
+        <rect width="4" height="4" fill="var(--wood)"/>
+        <line x1="0" y1="0" x2="0" y2="4" stroke="var(--wood-edge)" stroke-opacity="0.35" stroke-width="0.9"/>
+      </pattern>
+      <pattern id="hatchL" width="4" height="4" patternUnits="userSpaceOnUse" patternTransform="rotate(45)">
+        <rect width="4" height="4" fill="var(--lock)"/>
+        <line x1="0" y1="0" x2="0" y2="4" stroke="var(--lock-edge)" stroke-opacity="0.4" stroke-width="0.9"/>
+      </pattern>
+    </defs>`);
+
+    // Vägg/läkt bakom (referenslinje)
+    s.push(`<line x1="${(mX-mX*0.6).toFixed(1)}" y1="${yBot.toFixed(1)}" x2="${(W-mX*0.4).toFixed(1)}" y2="${yBot.toFixed(1)}" stroke="var(--line)" stroke-width="${lw*1.6}" stroke-dasharray="${fs*0.3} ${fs*0.22}"/>`);
+
+    // Bottenbrädor i snitt
+    b.forEach(o=>{
+      s.push(`<rect x="${o.x.toFixed(1)}" y="${yBoard.toFixed(1)}" width="${o.w.toFixed(1)}" height="${tb.toFixed(1)}" fill="url(#hatch)" stroke="var(--wood-edge)" stroke-width="${lw*1.6}"/>`);
+    });
+
+    // Lock ovanpå, centrerade över varje glipa
+    gaps.forEach(gp=>{
+      s.push(`<rect x="${(gp.c-wl/2).toFixed(1)}" y="${yLock.toFixed(1)}" width="${wl.toFixed(1)}" height="${tl.toFixed(1)}" fill="url(#hatchL)" stroke="var(--lock-edge)" stroke-width="${lw*1.6}"/>`);
+    });
+
+    // Snittlinjer (brytsymbol) på de yttersta, kapade brädorna
+    function breakLine(x){
+      const a = Math.max(tb*0.16, fs*0.28);      // zigzag-amplitud
+      const n = 5, dy = tb/n;
+      let d = `M ${x.toFixed(1)} ${(yBoard-fs*0.5).toFixed(1)} L ${x.toFixed(1)} ${yBoard.toFixed(1)}`;
+      for(let i=0;i<n;i++){
+        const xx = (i%2===0 ? x-a : x+a);
+        d += ` L ${xx.toFixed(1)} ${(yBoard+dy*(i+0.5)).toFixed(1)}`;
+      }
+      d += ` L ${x.toFixed(1)} ${yBot.toFixed(1)} L ${x.toFixed(1)} ${(yBot+fs*0.5).toFixed(1)}`;
+      return `<path d="${d}" fill="none" stroke="var(--ink)" stroke-width="${lw*1.5}" stroke-linejoin="round" stroke-linecap="round"/>`;
+    }
+    s.push(breakLine(b[0].x));                       // kap på bräda 1
+    s.push(breakLine(b[3].x + b[3].w));              // kap på bräda 4
+
+    // Glipans kantlinjer + mått under varje glipa
+    const yG = yBot + fs*1.9;
+    gaps.forEach(gp=>{
+      [gp.gl,gp.gr].forEach(x=>{
+        s.push(`<line x1="${x.toFixed(1)}" y1="${(yBoard-fs*1.3).toFixed(1)}" x2="${x.toFixed(1)}" y2="${(yG+fs*0.3).toFixed(1)}" stroke="var(--dim)" stroke-width="${lw}" stroke-dasharray="${fs*0.22} ${fs*0.18}" opacity="0.7"/>`);
+      });
+      s.push(`<line x1="${gp.gl.toFixed(1)}" y1="${yG.toFixed(1)}" x2="${gp.gr.toFixed(1)}" y2="${yG.toFixed(1)}" stroke="var(--dim)" stroke-width="${lw*1.4}" marker-start="url(#dh2)" marker-end="url(#dh)"/>`);
+      s.push(`<text x="${gp.c.toFixed(1)}" y="${(yG+fs*1.5).toFixed(1)}" font-size="${fs}" fill="var(--dim)" text-anchor="middle" font-weight="600">${fmt(g)}</text>`);
+    });
+    s.push(`<text x="${((gaps[0].c+gaps[2].c)/2).toFixed(1)}" y="${(yG+fs*3).toFixed(1)}" font-size="${fs*0.9}" fill="var(--dim)" text-anchor="middle">glipa ${fmt(g)} mm</text>`);
+
+    // Överlapp – redovisas på mittersta locket
+    const gm = gaps[1], lockL = gm.c - wl/2, lockR = gm.c + wl/2;
+    const yO = yLock - fs*1.0;
+    [[lockL,gm.gl],[gm.gr,lockR]].forEach(([a,c])=>{
+      if(c-a > 0.3){
+        s.push(`<line x1="${a.toFixed(1)}" y1="${yO.toFixed(1)}" x2="${c.toFixed(1)}" y2="${yO.toFixed(1)}" stroke="${bad?'var(--bad)':'var(--steel)'}" stroke-width="${lw*1.4}" marker-start="url(#dh2)" marker-end="url(#dh)"/>`);
+      }
+      s.push(`<line x1="${a.toFixed(1)}" y1="${(yO-fs*0.4).toFixed(1)}" x2="${a.toFixed(1)}" y2="${yLock.toFixed(1)}" stroke="var(--steel)" stroke-width="${lw*0.8}" opacity="0.5"/>`);
+    });
+    s.push(`<text x="${((lockL+gm.gl)/2).toFixed(1)}" y="${(yO-fs*0.55).toFixed(1)}" font-size="${fs*0.85}" fill="${bad?'var(--bad)':'var(--steel)'}" text-anchor="middle">${fmt(ov)}</text>`);
+    s.push(`<text x="${((gm.gr+lockR)/2).toFixed(1)}" y="${(yO-fs*0.55).toFixed(1)}" font-size="${fs*0.85}" fill="${bad?'var(--bad)':'var(--steel)'}" text-anchor="middle">${fmt(ov)}</text>`);
+
+    // Etiketter
+    s.push(`<text x="${(b[1].x+wb/2).toFixed(1)}" y="${(yBoard+tb/2+fs*0.35).toFixed(1)}" font-size="${fs*0.78}" fill="var(--ink)" text-anchor="middle" opacity="0.75">${fmt(wb)}×${fmt(tb)}</text>`);
+    s.push(`<text x="${gaps[0].c.toFixed(1)}" y="${(yLock+tl/2+fs*0.35).toFixed(1)}" font-size="${fs*0.72}" fill="#fff" text-anchor="middle">${fmt(wl)}×${fmt(tl)}</text>`);
+
+    s.push(`</svg>`);
+    el.innerHTML = `<div class="dhd">Detalj · genomskärning</div>`+s.join('');
   }
 
   function renderSelected(p){
@@ -588,23 +724,24 @@
     else { warnEl.classList.add('hidden'); }
 
     drawSVG(p,o);
+    drawDetail(p,o);
 
     // Tabell
     const cc=o.cc, tb=$('tbl').querySelector('tbody');
+    const off=p.off||0;
     let rows='';
     for(let k=0;k<o.N;k++){
-      const left=k*cc, center=left+p.wb/2, right=left+p.wb;
+      const left=k*cc+off, center=left+p.wb/2, right=left+p.wb;
       rows+=`<tr><td>#${k+1}</td><td>${fmt0(left)}</td><td>${fmt0(center)}</td><td class="pos">${fmt0(right)}</td></tr>`;
     }
     tb.innerHTML=rows;
   }
 
   // Events
-  ['wb','tb','wl','tl','gmin','gmax','L'].forEach(id=>{
+  ['wb','tb','wl','tl','gmin','gmax','L','off'].forEach(id=>{
     $(id).addEventListener('input',()=>{ render(); });
   });
   $('gdes').addEventListener('input',()=>{ state.desiredManual=true; state.selected=0; render(); });
-  $('gdesReset').addEventListener('click',()=>{ state.desiredManual=false; state.selected=0; render(); });
   // vid ändrad totallängd: nollställ val
   $('L').addEventListener('input',()=>{ state.selected=0; });
 
